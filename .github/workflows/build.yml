@@ -1,5 +1,5 @@
 
-name: NIVEK ECLIPSE - Build
+name: NIVEK ECLIPSE - Advanced Build
 
 on:
   push:
@@ -11,41 +11,64 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: nivek-eclipse-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    name: Build Minecraft Mod
+    name: Compile Fabric 1.21.8
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
 
     steps:
-      - name: Baixar repositorio
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Configurar Java 21
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
 
-      - name: Instalar Gradle 8.14.3
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '8.14.3'
+          cache-cleanup: on-success
 
-      - name: Verificar arquivos do projeto
+      - name: Environment Information
         run: |
-          echo "Verificando estrutura..."
-          test -f build.gradle || test -f build.gradle.kts
-          test -f settings.gradle || test -f settings.gradle.kts
-          echo "Arquivos principais encontrados!"
+          echo "=== NIVEK ECLIPSE BUILD ==="
+          java -version
+          gradle --version
+          echo "=== PROJECT FILES ==="
+          ls -la
+          echo "=== SOURCE FILES ==="
+          find src -type f 2>/dev/null | head -100
 
-      - name: Verificar Gradle
-        run: gradle --version
+      - name: Validate Project
+        run: |
+          if [ ! -f build.gradle ] && [ ! -f build.gradle.kts ]; then
+            echo "::error::build.gradle or build.gradle.kts not found"
+            exit 1
+          fi
 
-      - name: Compilar NIVEK ECLIPSE
-        run: gradle build --no-daemon --stacktrace
+          if [ ! -f settings.gradle ] && [ ! -f settings.gradle.kts ]; then
+            echo "::error::settings.gradle or settings.gradle.kts not found"
+            exit 1
+          fi
 
-      - name: Publicar arquivo JAR
+          echo "Project structure validated."
+
+      - name: Clean Previous Build
+        run: gradle clean --no-daemon
+
+      - name: Compile and Build Mod
+        id: build
+        run: gradle build --no-daemon --stacktrace --warning-mode all
+
+      - name: Upload Mod JAR
         if: success()
         uses: actions/upload-artifact@v4
         with:
@@ -55,3 +78,28 @@ jobs:
             !build/libs/*-sources.jar
           if-no-files-found: error
           retention-days: 30
+
+      - name: Save Build Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NIVEK-ECLIPSE-Build-Reports
+          path: |
+            build/reports/
+            build/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Build Summary
+        if: always()
+        run: |
+          echo "## NIVEK ECLIPSE - Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Minecraft: 1.21.8" >> $GITHUB_STEP_SUMMARY
+          echo "- Fabric: configured in project" >> $GITHUB_STEP_SUMMARY
+          echo "- Java: 21" >> $GITHUB_STEP_SUMMARY
+          echo "- Gradle: 8.14.3" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "- Result: SUCCESS" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Result: FAILED - check compilation logs" >> $GITHUB_STEP_SUMMARY
+          fi
