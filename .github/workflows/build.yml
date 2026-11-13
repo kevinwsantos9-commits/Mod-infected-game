@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
@@ -34,7 +34,26 @@ jobs:
           gradle-version: 8.14.3
 
       - name: Build
-        run: gradle build --stacktrace
+        run: |
+          gradle build --stacktrace --console=plain 2>&1 | tee build.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Resumo dos erros (so se o build falhar)
+        if: failure()
+        run: |
+          {
+            echo "### Erros do build"
+            echo '```'
+            grep -E "error:|warning: \[removal\]|What went wrong|Could not|FAILED" -A3 build.log | head -n 120
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Guardar o log completo (so se o build falhar)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ github.run_number }}
+          path: build.log
 
       - name: Separar o jar principal (sem o -sources)
         run: |
