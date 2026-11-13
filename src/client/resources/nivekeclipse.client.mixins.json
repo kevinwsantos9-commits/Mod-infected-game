@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.nivek.eclipse.client.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "PlayerRenderStateMixin",
+    "PlayerRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

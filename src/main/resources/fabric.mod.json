@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "nivekeclipse",
+  "version": "${version}",
+  "name": "NIVEK: ECLIPSE",
+  "description": "Um meteoro, uma fusão alienígena e a evolução do jogador.",
+  "authors": ["NIVEK"],
+  "license": "All-Rights-Reserved",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.nivek.eclipse.NivekEclipse"],
+    "client": ["com.nivek.eclipse.client.NivekEclipseClient"]
+  },
+  "mixins": [
+    { "config": "nivekeclipse.client.mixins.json", "environment": "client" }
+  ],
+  "depends": {
+    "fabricloader": ">=0.17.3",
+    "minecraft": "~1.21.8",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
